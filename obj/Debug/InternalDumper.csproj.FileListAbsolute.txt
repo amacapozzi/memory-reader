@@ -1,0 +1,10 @@
+R:\Developement\InternalDumper\InternalDumper\bin\Debug\InternalDumper.exe.config
+R:\Developement\InternalDumper\InternalDumper\bin\Debug\InternalDumper.exe
+R:\Developement\InternalDumper\InternalDumper\bin\Debug\InternalDumper.pdb
+R:\Developement\InternalDumper\InternalDumper\obj\Debug\InternalDumper.csproj.AssemblyReference.cache
+R:\Developement\InternalDumper\InternalDumper\obj\Debug\InternalDumper.csproj.CoreCompileInputs.cache
+R:\Developement\InternalDumper\InternalDumper\obj\Debug\InternalDumper.exe
+R:\Developement\InternalDumper\InternalDumper\obj\Debug\InternalDumper.pdb
+R:\Developement\InternalDumper\InternalDumper\bin\Debug\ProcessMemoryUtilities.dll
+R:\Developement\InternalDumper\InternalDumper\bin\Debug\ProcessMemoryUtilities.xml
+R:\Developement\InternalDumper\InternalDumper\obj\Debug\Internal.FC3B4385.Up2Date
