@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -31,9 +32,8 @@ public class MemoryReader
 
     private const int PROCESS_VM_READ = 0x0010;
     private const int PROCESS_QUERY_INFORMATION = 0x0400;
-
     private IntPtr _processHandle;
-    private readonly StringParser _stringParser;
+    private List<string> dump = new List<string>();
 
     public MemoryReader(int processId)
     {
@@ -42,14 +42,14 @@ public class MemoryReader
         {
             throw new Exception("Could not open process for reading.");
         }
-        _stringParser = new StringParser();
     }
 
     public byte[] ReadMemory(IntPtr address, int size)
     {
         byte[] buffer = new byte[size];
-        if (ReadProcessMemory(_processHandle, address, buffer, size, out int bytesRead) && bytesRead == size)
+        if (ReadProcessMemory(_processHandle, address, buffer, size, out int bytesRead))
         {
+            Array.Resize(ref buffer, bytesRead);
             return buffer;
         }
         else
@@ -58,18 +58,49 @@ public class MemoryReader
         }
     }
 
-    public string ReadMemoryAsString(IntPtr address, int size, Encoding encoding)
+    private static bool IsChar(byte b)
     {
-        byte[] buffer = ReadMemory(address, size);
-        return encoding.GetString(buffer);
+        return (b >= 32 && b <= 126) || b == 10 || b == 13 || b == 9;
     }
 
-    public void Close()
+    public void ParseMemory(IntPtr address, int regionSize)
     {
-        if (_processHandle != IntPtr.Zero)
+        byte[] buffer = ReadMemory(address, regionSize);
+        StringBuilder builder = new StringBuilder();
+        bool uFlag = true, isUnicode = false;
+        byte first = 0, second = 0;
+
+        for (int i = 0; i < buffer.Length; i++)
         {
-            CloseHandle(_processHandle);
-            _processHandle = IntPtr.Zero;
+            bool cFlag = IsChar(buffer[i]);
+
+            if (cFlag && uFlag && isUnicode && first > 0)
+            {
+                isUnicode = false;
+                if (builder.Length > 0) builder.Remove(builder.Length - 1, 1);
+                builder.Append((char)buffer[i]);
+            }
+            else if (cFlag) builder.Append((char)buffer[i]);
+            else if (uFlag && buffer[i] == 0 && IsChar(first) && IsChar(second))
+                isUnicode = true;
+            else if (uFlag && buffer[i] == 0 && IsChar(first) && IsChar(second) && builder.Length < 5)
+            {
+                isUnicode = true;
+                builder = new StringBuilder();
+                builder.Append((char)first);
+            }
+            else
+            {
+                if (builder.Length >= 5 && builder.Length <= 1500)
+                {
+                    dump.Add(builder.ToString());
+                }
+                isUnicode = false;
+                builder = new StringBuilder();
+            }
+
+            first = second;
+            second = buffer[i];
         }
     }
 
@@ -84,9 +115,12 @@ public class MemoryReader
             {
                 try
                 {
-                    byte[] memoryContent = ReadMemory(mbi.BaseAddress, (int)mbi.RegionSize);
-                    bool p = _stringParser.ProcessContents(memoryContent, memoryContent.Length, "memory");
-                    Console.WriteLine(p);
+                    ParseMemory(mbi.BaseAddress, (int)mbi.RegionSize);
+
+                    foreach (var parsedString in dump)
+                    {
+                        Console.WriteLine(parsedString);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -94,6 +128,15 @@ public class MemoryReader
                 }
             }
             address = (IntPtr)((long)mbi.BaseAddress + (long)mbi.RegionSize);
+        }
+    }
+
+    public void Close()
+    {
+        if (_processHandle != IntPtr.Zero)
+        {
+            CloseHandle(_processHandle);
+            _processHandle = IntPtr.Zero;
         }
     }
 }
